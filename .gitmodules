@@ -1,0 +1,21 @@
+[submodule "submodules/minizip"]
+	path = submodules/minizip
+	url = https://github.com/nmoinvaz/minizip
+[submodule "submodules/libjpeg"]
+	path = submodules/libjpeg
+	url = https://github.com/winlibs/libjpeg
+[submodule "submodules/libpng"]
+	path = submodules/libpng
+	url = https://github.com/glennrp/libpng
+[submodule "submodules/zlib"]
+	path = submodules/zlib
+	url = https://github.com/madler/zlib
+[submodule "submodules/curl"]
+	path = submodules/curl
+	url = https://github.com/curl/curl.git
+[submodule "submodules/libtiff"]
+	path = submodules/libtiff
+	url = https://github.com/vadz/libtiff
+[submodule "submodules/freetype2"]
+	path = submodules/freetype2
+	url = git://git.sv.nongnu.org/freetype/freetype2.git
