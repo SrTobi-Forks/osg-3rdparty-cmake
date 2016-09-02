@@ -34,13 +34,34 @@ IF(MSVC)
 ENDIF()
 
 SET(ZLIB_PC zlib.pc)
-CONFIGURE_FILE(${ZLIB_SOURCE_DIR}/zlib.pc.cmakein ${ZLIB_PC} @ONLY)
-CONFIGURE_FILE(${ZLIB_SOURCE_DIR}/zconf.h.cmakein zconf.h @ONLY)
+IF(NOT AUTOMATIC_SOURE_DOWNLOAD)
+  CONFIGURE_FILE(${ZLIB_SOURCE_DIR}/zlib.pc.cmakein ${ZLIB_PC} @ONLY)
+  CONFIGURE_FILE(${ZLIB_SOURCE_DIR}/zconf.h.cmakein zconf.h @ONLY)
+ENDIF(NOT AUTOMATIC_SOURE_DOWNLOAD)
 
 
 #============================================================================
 # zlib
 #============================================================================
+
+SET(DOWNLOAD_TARGET download-zlib)
+
+if(AUTOMATIC_SOURE_DOWNLOAD)
+  SET(ZLIB_FULL_VERSION "1.2.8")
+  ExternalProject_add(
+      ${DOWNLOAD_TARGET}
+      PREFIX ${CMAKE_BINARY_DIR}/downloads/${TARGET_LIB}
+      GIT_REPOSITORY "https://github.com/madler/zlib"
+      GIT_TAG "v${ZLIB_FULL_VERSION}"
+      #CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_IN_SOURCE ON)
+  ExternalProject_Get_Property(${DOWNLOAD_TARGET} source_dir)
+  SET(ZLIB_SOURCE_DIR ${source_dir})
+  SET(ZLIB_SOURCE_DIR ${source_dir} PARENT_SCOPE)
+endif(AUTOMATIC_SOURE_DOWNLOAD)
 
 SET(ZLIB_PUBLIC_HDRS
   ${CMAKE_CURRENT_BINARY_DIR}/zconf.h
@@ -120,9 +141,11 @@ IF(MSVC)
 ENDIF()
 
 # parse the full version number from zlib.h and include in ZLIB_FULL_VERSION
-FILE(READ ${ZLIB_SOURCE_DIR}/zlib.h _zlib_h_contents)
-STRING(REGEX REPLACE ".*#define[ \t]+ZLIB_VERSION[ \t]+\"([-0-9A-Za-z.]+)\".*"
-  "\\1" ZLIB_FULL_VERSION ${_zlib_h_contents})
+IF(NOT AUTOMATIC_SOURE_DOWNLOAD)
+  FILE(READ ${ZLIB_SOURCE_DIR}/zlib.h _zlib_h_contents)
+  STRING(REGEX REPLACE ".*#define[ \t]+ZLIB_VERSION[ \t]+\"([-0-9A-Za-z.]+)\".*"
+    "\\1" ZLIB_FULL_VERSION ${_zlib_h_contents})
+ENDIF(NOT AUTOMATIC_SOURE_DOWNLOAD)
 
 IF(MINGW)
   # This gets us DLL resource information when compiling on MinGW.
@@ -140,9 +163,11 @@ IF(MINGW)
   SET(ZLIB_DLL_SRCS ${CMAKE_CURRENT_BINARY_DIR}/zlib1rc.obj)
 ENDIF(MINGW)
 
+mark_as_downloaded(${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_DLL_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 ADD_LIBRARY(zlib SHARED ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_DLL_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 SET_TARGET_PROPERTIES(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 SET_TARGET_PROPERTIES(zlib PROPERTIES SOVERSION 1)
+add_download_dependency(zlib ${DOWNLOAD_TARGET})
 
 IF(NOT CYGWIN)
   # This property causes shared libraries on Linux to have the full version
