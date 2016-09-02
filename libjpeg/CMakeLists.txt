@@ -3,17 +3,37 @@ PROJECT(jpeg C)
 SET(TARGET_LIB jpeg)
 
 IF(MSVC)
-  SET(jconfig "${LIBJPEG_SOURCE_DIR}/jconfig.vc")
+  SET(jconfig_file "jconfig.vc")
 ENDIF()
 
 IF (MINGW)
-  SET(jconfig "${LIBJPEG_SOURCE_DIR}/jconfig.vc")
+  SET(jconfig_file "jconfig.vc")
 ENDIF()
 
-CONFIGURE_FILE(${jconfig} jconfig.h @ONLY)
+SET(DOWNLOAD_TARGET download-${TARGET_LIB})
+
+IF(AUTOMATIC_SOURE_DOWNLOAD)
+  ExternalProject_add(
+      ${DOWNLOAD_TARGET}
+      PREFIX ${CMAKE_BINARY_DIR}/downloads/${TARGET_LIB}
+      GIT_REPOSITORY "https://github.com/winlibs/libjpeg"
+      GIT_TAG "libjpeg-9b"
+      CONFIGURE_COMMAND "${CMAKE_COMMAND}" -E copy ${jconfig_file} jconfig.h
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_IN_SOURCE ON)
+  ExternalProject_Get_Property(${DOWNLOAD_TARGET} source_dir)
+  SET(LIBJPEG_SOURCE_DIR ${source_dir})
+  SET(LIBJPEG_CONFIG_DIR ${LIBJPEG_SOURCE_DIR})
+ELSE(AUTOMATIC_SOURE_DOWNLOAD)
+  CONFIGURE_FILE("${LIBJPEG_SOURCE_DIR}/${jconfig_file}" jconfig.h @ONLY)
+  SET(LIBJPEG_CONFIG_DIR ${LIBJPEG_SOURCE_DIR})
+ENDIF(AUTOMATIC_SOURE_DOWNLOAD)
+
 
 SET(LIBJPEG_PUBLIC_HEADERS
-  ${CMAKE_CURRENT_BINARY_DIR}/jconfig.h
+  ${LIBJPEG_CONFIG_DIR}/jconfig.h
   ${LIBJPEG_SOURCE_DIR}/jerror.h
   ${LIBJPEG_SOURCE_DIR}/jmorecfg.h
   ${LIBJPEG_SOURCE_DIR}/jpeglib.h
@@ -75,6 +95,7 @@ SET(LIBJPEG_SRCS
   ${LIBJPEG_SOURCE_DIR}/jquant2.c
   ${LIBJPEG_SOURCE_DIR}/jutils.c
 )
+mark_as_downloaded(${LIBJPEG_PUBLIC_HEADERS} ${LIBJPEG_PRIVATE_HEADERS} ${LIBJPEG_SRCS})
 
 # Dependent include files
 INCLUDE_DIRECTORIES(${LIBJPEG_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
@@ -86,6 +107,7 @@ IF(MSVC)
 ENDIF(MSVC)
 
 ADD_LIBRARY(${TARGET_LIB} STATIC ${LIBJPEG_SRCS} ${LIBJPEG_PRIVATE_HEADERS} ${LIBJPEG_PUBLIC_HEADERS})
+add_download_dependency(${TARGET_LIB} ${DOWNLOAD_TARGET})
 
 # Runtime equals DLL-files
 # Archive equals static libraries
