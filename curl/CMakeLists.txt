@@ -1,7 +1,22 @@
 PROJECT(curl C)
 
 SET(TARGET_LIB libcurl)
+SET(DOWNLOAD_TARGET download-${TARGET_LIB})
 
+if(AUTOMATIC_SOURE_DOWNLOAD)
+  ExternalProject_add(
+      ${DOWNLOAD_TARGET}
+      PREFIX ${CMAKE_BINARY_DIR}/downloads/${TARGET_LIB}
+      GIT_REPOSITORY "https://github.com/curl/curl.git"
+      GIT_TAG "curl-7_50_1"
+      #CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_IN_SOURCE ON)
+  ExternalProject_Get_Property(${DOWNLOAD_TARGET} source_dir)
+  set(CURL_SOURCE_DIR ${source_dir})
+endif(AUTOMATIC_SOURE_DOWNLOAD)
 
 SET(CURL_PUBLIC_HEADERS
   ${CURL_SOURCE_DIR}/include/curl/curl.h
@@ -130,6 +145,7 @@ SET(CURL_SRCS
   ${CURL_SOURCE_DIR}/lib/vauth/vauth.c
   ${CURL_SOURCE_DIR}/lib/vtls/vtls.c
 )
+mark_as_downloaded(${CURL_PUBLIC_HEADERS};${CURL_PRIVATE_HEADERS};${CURL_SRCS})
 
 # Dependent include files
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR})
@@ -147,6 +163,7 @@ IF(MINGW)
 ENDIF(MINGW)
 
 ADD_LIBRARY(${TARGET_LIB} SHARED ${CURL_SRCS} ${CURL_PUBLIC_HEADERS} ${CURL_PRIVATE_HEADERS})
+add_download_dependency(${TARGET_LIB} ${DOWNLOAD_TARGET})
 
 TARGET_INCLUDE_DIRECTORIES(${TARGET_LIB} PRIVATE ${CURL_SOURCE_DIR}/include)
 TARGET_INCLUDE_DIRECTORIES(${TARGET_LIB} PRIVATE ${CURL_SOURCE_DIR}/lib)
