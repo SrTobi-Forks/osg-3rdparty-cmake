@@ -30,17 +30,57 @@ SET(PNG_LIB_NAME png)
 # to distinguish between debug and release lib
 SET(CMAKE_DEBUG_POSTFIX "d")
 
-# Use the prebuilt pnglibconf.h file from the scripts folder
-# TODO: fix this by building with awk; without this no cmake build can be
-# configured directly (to do so indirectly use your local awk to build a
-# pnglibconf.h in the build directory.)
-CONFIGURE_FILE(${LIBPNG_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt pnglibconf.h @ONLY)
+# Dependent include files
+INCLUDE_DIRECTORIES(${LIBPNG_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+INCLUDE_DIRECTORIES("${ZLIB_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/zlib")
+
+IF(MSVC)
+  SET(ZLIB_LIBRARY "${LIBRARY_OUTPUT_PATH}/Release/zlib.lib")
+  SET(ZLIB_DEBUG_LIBRARY "${LIBRARY_OUTPUT_PATH}/Debug/zlibd.lib")
+ENDIF()
+
+IF(MINGW)
+  SET(ZLIB_LIBRARY "${LIBRARY_OUTPUT_PATH}/zlib1.a")
+  SET(ZLIB_DEBUG_LIBRARY "${LIBRARY_OUTPUT_PATH}/zlib1d.a")
+ENDIF(MINGW)
+
+MARK_AS_ADVANCED(ZLIB_LIBRARY ZLIB_DEBUG_LIBRARY)
+
+
+SET(DOWNLOAD_TARGET download-${TARGET_LIB})
+
+IF(AUTOMATIC_SOURE_DOWNLOAD)
+  ExternalProject_add(
+      ${DOWNLOAD_TARGET}
+      PREFIX ${CMAKE_BINARY_DIR}/downloads/${TARGET_LIB}
+      GIT_REPOSITORY "https://github.com/glennrp/libpng"
+      GIT_TAG "v1.6.25"
+      CMAKE_ARGS "-DZLIB_LIBRARY=${ZLIB_DEBUG_LIBRARY}" "-DZLIB_INCLUDE_DIR=${ZLIB_SOURCE_DIR}"
+      #CONFIGURE_COMMAND ""
+      #BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_IN_SOURCE ON)
+  ADD_DEPENDENCIES(${DOWNLOAD_TARGET} zlib)
+  ExternalProject_Get_Property(${DOWNLOAD_TARGET} source_dir)
+  SET(LIBPNG_SOURCE_DIR ${source_dir})
+  SET(LIBPNG_SOURCE_DIR ${source_dir} PARENT_SCOPE)
+  SET(LIBPNG_CONFIG_DIR ${LIBPNG_SOURCE_DIR})
+ELSE(AUTOMATIC_SOURE_DOWNLOAD)
+  # Use the prebuilt pnglibconf.h file from the scripts folder
+  # TODO: fix this by building with awk; without this no cmake build can be
+  # configured directly (to do so indirectly use your local awk to build a
+  # pnglibconf.h in the build directory.)
+  CONFIGURE_FILE(${LIBPNG_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt pnglibconf.h @ONLY)
+  SET(LIBPNG_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR})
+ENDIF(AUTOMATIC_SOURE_DOWNLOAD)
+
 
 # OUR SOURCES
 SET(LIBPNG_PUBLIC_HEADERS
   ${LIBPNG_SOURCE_DIR}/png.h
   ${LIBPNG_SOURCE_DIR}/pngconf.h
-  ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h
+  ${LIBPNG_CONFIG_DIR}/pnglibconf.h
 )
 SET(LIBPNG_SOURCES
   ${LIBPNG_SOURCE_DIR}/pngdebug.h
@@ -64,22 +104,6 @@ SET(LIBPNG_SOURCES
   ${LIBPNG_SOURCE_DIR}/pngwutil.c
 )
 
-# Dependent include files
-INCLUDE_DIRECTORIES(${LIBPNG_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
-INCLUDE_DIRECTORIES("${ZLIB_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/zlib")
-
-IF(MSVC)
-  SET(ZLIB_LIBRARY "${LIBRARY_OUTPUT_PATH}/Release/zlib.lib")
-  SET(ZLIB_DEBUG_LIBRARY "${LIBRARY_OUTPUT_PATH}/Debug/zlibd.lib")
-ENDIF()
-
-IF(MINGW)
-  SET(ZLIB_LIBRARY "${LIBRARY_OUTPUT_PATH}/zlib1.a")
-  SET(ZLIB_DEBUG_LIBRARY "${LIBRARY_OUTPUT_PATH}/zlib1d.a")
-ENDIF(MINGW)
-
-MARK_AS_ADVANCED(ZLIB_LIBRARY ZLIB_DEBUG_LIBRARY)
-
 SET(ZLIB_LIBRARIES optimized ${ZLIB_LIBRARY} debug ${ZLIB_DEBUG_LIBRARY})
 
 
@@ -89,7 +113,9 @@ IF(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -DPNG_CONFIGURE_LIBPNG -DPNG_DEBUG -DPNG_BUILD_DLL)
 ENDIF(MSVC)
 
+mark_as_downloaded(${LIBPNG_SOURCES} ${LIBPNG_PUBLIC_HEADERS})
 ADD_LIBRARY(${PNG_LIB_NAME} SHARED ${LIBPNG_SOURCES} ${LIBPNG_PUBLIC_HEADERS})
+add_download_dependency(${PNG_LIB_NAME} ${DOWNLOAD_TARGET})
 
 IF(MSVC)
   # msvc does not append 'lib' - do it here to have consistent name
