@@ -3,6 +3,23 @@ PROJECT(minizip C)
 SET(TARGET_LIB minizip)
 
 
+SET(DOWNLOAD_TARGET download-${TARGET_LIB})
+
+IF(AUTOMATIC_SOURE_DOWNLOAD)
+  ExternalProject_add(
+      ${DOWNLOAD_TARGET}
+      PREFIX ${CMAKE_BINARY_DIR}/downloads/${TARGET_LIB}
+      GIT_REPOSITORY "https://github.com/nmoinvaz/minizip"
+      GIT_TAG "16455205a717532e416d92c40df44f3b1797d7d8"
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_IN_SOURCE ON)
+  ExternalProject_Get_Property(${DOWNLOAD_TARGET} source_dir)
+  SET(MINIZIP_SOURCE_DIR ${source_dir})
+ENDIF(AUTOMATIC_SOURE_DOWNLOAD)
+
 SET(MINIZIP_PUBLIC_HEADERS
   ${MINIZIP_SOURCE_DIR}/zip.h
 )
@@ -18,6 +35,7 @@ SET(MINIZIP_SRCS
   ${MINIZIP_SOURCE_DIR}/minizip.c
   ${MINIZIP_SOURCE_DIR}/zip.c
 )
+mark_as_downloaded(${MINIZIP_PUBLIC_HEADERS} ${MINIZIP_PRIVATE_HEADERS} ${MINIZIP_SRCS})
 
 # Dependent include files
 INCLUDE_DIRECTORIES(${MINIZIP_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
@@ -29,6 +47,7 @@ IF(MSVC)
 ENDIF(MSVC)
 
 ADD_LIBRARY(${TARGET_LIB} STATIC ${MINIZIP_SRCS} ${MINIZIP_PRIVATE_HEADERS} ${MINIZIP_PUBLIC_HEADERS})
+add_download_dependency(${TARGET_LIB} ${DOWNLOAD_TARGET})
 
 # Runtime equals DLL-files
 # Archive equals static libraries
