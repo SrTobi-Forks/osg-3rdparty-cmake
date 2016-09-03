@@ -3,6 +3,28 @@ PROJECT(libtiff C)
 SET(TARGET_LIB libtiff)
 
 
+SET(CONFIGURE_LIBTIFF_NOW ON)
+SET(DOWNLOAD_TARGET download-${TARGET_LIB})
+
+IF(AUTOMATIC_SOURE_DOWNLOAD)
+  ExternalProject_add(
+      ${DOWNLOAD_TARGET}
+      PREFIX ${CMAKE_BINARY_DIR}/downloads/${TARGET_LIB}
+      GIT_REPOSITORY "https://github.com/vadz/libtiff"
+      GIT_TAG "Release-v4-0-6"
+      #CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_IN_SOURCE ON)
+  ADD_DEPENDENCIES(${DOWNLOAD_TARGET} zlib)
+  ExternalProject_Get_Property(${DOWNLOAD_TARGET} source_dir)
+  SET(LIBTIFF_SOURCE_DIR ${source_dir})
+  SET(LIBTIFF_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/libtiff")
+  SET(CONFIGURE_LIBTIFF_NOW OFF)
+ELSE(AUTOMATIC_SOURCE_DOWNLOAD)
+ENDIF(AUTOMATIC_SOURE_DOWNLOAD)
+
 IF(MSVC)
   SET(tif_config "${LIBTIFF_SOURCE_DIR}/libtiff/tif_config.vc.h")
   SET(tiffconf "${LIBTIFF_SOURCE_DIR}/libtiff/tiffconf.vc.h")
@@ -11,21 +33,17 @@ ENDIF()
 IF(MINGW)
   SET(tif_config "${CMAKE_CURRENT_SOURCE_DIR}/tif_config.mingw.h")
   SET(tiffconf "${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.mingw.h")
+  SET(CONFIGURE_LIBTIFF_NOW ON)
 ENDIF()
 
-CONFIGURE_FILE(${tif_config} tif_config.h @ONLY)
-CONFIGURE_FILE(${tiffconf} tiffconf.h @ONLY)
-
-
-SET(_LIBTIFF_VERSION_FILE "${LIBTIFF_SOURCE_DIR}/VERSION")
-  
-IF(EXISTS "${_LIBTIFF_VERSION_FILE}") 
-  FILE(STRINGS "${_LIBTIFF_VERSION_FILE}" LIBTIFF_VERSION REGEX "[0-9]+\\.[0-9]+\\.[0-9]+")
-ENDIF()
-
+IF(CONFIGURE_LIBTIFF_NOW)
+  CONFIGURE_FILE(${tif_config} tif_config.h @ONLY)
+  CONFIGURE_FILE(${tiffconf} tiffconf.h @ONLY)
+  SET(LIBTIFF_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR})
+ENDIF(CONFIGURE_LIBTIFF_NOW)
 
 SET(LIBTIFF_PUBLIC_HEADERS
-  ${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h
+  ${LIBTIFF_CONFIG_DIR}/tiffconf.h
 
   ${LIBTIFF_SOURCE_DIR}/libtiff/tiff.h
   ${LIBTIFF_SOURCE_DIR}/libtiff/tiffio.h
@@ -33,7 +51,7 @@ SET(LIBTIFF_PUBLIC_HEADERS
 )
 
 SET(LIBTIFF_PRIVATE_HEADERS
-  ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h
+  ${LIBTIFF_CONFIG_DIR}/tif_config.h
 
   ${LIBTIFF_SOURCE_DIR}/libtiff/tif_dir.h
   ${LIBTIFF_SOURCE_DIR}/libtiff/tif_fax3.h
@@ -82,6 +100,7 @@ SET(LIBTIFF_SRCS
   ${LIBTIFF_SOURCE_DIR}/libtiff/tif_write.c
   ${LIBTIFF_SOURCE_DIR}/libtiff/tif_zip.c
 )
+mark_as_downloaded(${LIBTIFF_PUBLIC_HEADERS} ${LIBTIFF_PRIVATE_HEADERS} ${LIBTIFF_SRCS})
 
 # Dependent include files
 INCLUDE_DIRECTORIES("${LIBTIFF_SOURCE_DIR}/libtiff" ${CMAKE_CURRENT_BINARY_DIR})
@@ -130,6 +149,7 @@ ENDIF(MSVC)
 
 ADD_LIBRARY(${TARGET_LIB} STATIC ${LIBTIFF_SRCS} ${LIBTIFF_PRIVATE_HEADERS} ${LIBTIFF_PUBLIC_HEADERS})
 target_link_libraries(${TARGET_LIB} ${ZLIB_LIBRARIES} ${JPEG_LIBRARIES})
+add_download_dependency(${TARGET_LIB} ${DOWNLOAD_TARGET})
 
 IF(MINGW)
   # Static library name

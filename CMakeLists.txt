@@ -118,7 +118,7 @@ ELSE()
   MESSAGE("[ ] libjpeg source not found")
 ENDIF()
 
-IF (LIBTIFF_SOURCE_DIR)
+IF (LIBTIFF_SOURCE_DIR OR AUTOMATIC_SOURE_DOWNLOAD)
   MESSAGE("[+] libtiff source found")
   ADD_SUBDIRECTORY(libtiff)
 ELSE()
